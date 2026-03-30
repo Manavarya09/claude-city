@@ -24,16 +24,18 @@ export class City {
     this.scene.add(this.labelGroup);
     this.scene.add(this.roadGroup);
 
-    // Shared materials
+    // Shared materials — visible dark blue buildings with slight sheen
     this.buildingMat = new THREE.MeshStandardMaterial({
-      color: 0x0c0c1a,
-      roughness: 0.7,
-      metalness: 0.5,
+      color: 0x1a1a30,
+      roughness: 0.5,
+      metalness: 0.6,
+      emissive: 0x050510,
+      emissiveIntensity: 0.3,
     });
     this.windowMat = new THREE.MeshBasicMaterial({
-      color: 0x88aaff,
+      color: 0xaaccff,
       transparent: true,
-      opacity: 0.9,
+      opacity: 1.0,
     });
   }
 
@@ -123,60 +125,35 @@ export class City {
       geos.push(antennaGeo);
     }
 
-    // Windows on all 4 faces
-    const windowSize = 0.25;
-    const floorHeight = 1.0;
-    const floors = Math.floor(height / floorHeight);
+    // Windows — fewer but bigger and brighter for performance
     const bw = w - ROAD_GAP;
     const bd = d - ROAD_GAP;
 
-    for (let floor = 1; floor < Math.min(floors, 50); floor++) {
-      const fy = floor * floorHeight;
+    if (height > 2) {
+      const floorH = 1.5;
+      const floors = Math.min(Math.floor(height / floorH), 25);
+      const wSize = Math.min(bw * 0.25, 0.4);
+      const wCount = Math.max(1, Math.floor(bw / (wSize * 2.5)));
 
-      // Windows per floor based on building width
-      const wCount = Math.max(1, Math.floor(bw / 0.6));
-      const dCount = Math.max(1, Math.floor(bd / 0.6));
-
-      // Front face (z+)
-      for (let wi = 0; wi < wCount; wi++) {
-        if (Math.random() > 0.65) continue; // Some dark windows
-        const wGeo = new THREE.PlaneGeometry(windowSize, windowSize);
-        const wx = x - bw / 2 + (wi + 0.5) * (bw / wCount);
-        wGeo.translate(wx, fy, z + bd / 2 + 0.02);
-        wins.push(wGeo);
-      }
-
-      // Back face (z-)
-      for (let wi = 0; wi < wCount; wi++) {
-        if (Math.random() > 0.65) continue;
-        const wGeo = new THREE.PlaneGeometry(windowSize, windowSize);
-        const wx = x - bw / 2 + (wi + 0.5) * (bw / wCount);
-        wGeo.rotateY(Math.PI);
-        wGeo.translate(wx, fy, z - bd / 2 - 0.02);
-        wins.push(wGeo);
-      }
-
-      // Right face (x+)
-      if (floor % 2 === 0) { // Every other floor for side faces
-        for (let di = 0; di < dCount; di++) {
-          if (Math.random() > 0.6) continue;
-          const wGeo = new THREE.PlaneGeometry(windowSize, windowSize);
-          const wz = z - bd / 2 + (di + 0.5) * (bd / dCount);
-          wGeo.rotateY(Math.PI / 2);
-          wGeo.translate(x + bw / 2 + 0.02, fy, wz);
+      for (let f = 1; f < floors; f++) {
+        const fy = f * floorH;
+        // Front face only (z+) — biggest perf win
+        for (let wi = 0; wi < wCount; wi++) {
+          if (Math.random() > 0.55) continue;
+          const wGeo = new THREE.PlaneGeometry(wSize, wSize * 0.7);
+          wGeo.translate(x - bw / 2 + (wi + 0.5) * (bw / wCount), fy, z + bd / 2 + 0.03);
           wins.push(wGeo);
         }
-      }
-
-      // Left face (x-)
-      if (floor % 2 === 1) {
-        for (let di = 0; di < dCount; di++) {
-          if (Math.random() > 0.6) continue;
-          const wGeo = new THREE.PlaneGeometry(windowSize, windowSize);
-          const wz = z - bd / 2 + (di + 0.5) * (bd / dCount);
-          wGeo.rotateY(-Math.PI / 2);
-          wGeo.translate(x - bw / 2 - 0.02, fy, wz);
-          wins.push(wGeo);
+        // Right face (x+) — every other floor
+        if (f % 2 === 0) {
+          const dCount = Math.max(1, Math.floor(bd / (wSize * 2.5)));
+          for (let di = 0; di < dCount; di++) {
+            if (Math.random() > 0.5) continue;
+            const wGeo = new THREE.PlaneGeometry(wSize, wSize * 0.7);
+            wGeo.rotateY(Math.PI / 2);
+            wGeo.translate(x + bw / 2 + 0.03, fy, z - bd / 2 + (di + 0.5) * (bd / dCount));
+            wins.push(wGeo);
+          }
         }
       }
     }
@@ -241,24 +218,27 @@ export class City {
       }
     }
 
-    // Fill empty spaces with small ambient buildings
-    const gridSize = 2;
+    // Fill empty spaces densely with ambient buildings
+    const gridSize = 1.8;
     const count = Math.floor(CITY_SIZE / gridSize);
     let fillerCount = 0;
-    const maxFillers = Math.max(500, this.buildings.length * FILL_DENSITY);
+    const maxFillers = Math.max(2000, this.buildings.length * 8);
 
-    for (let gx = 2; gx < count - 2; gx++) {
-      for (let gz = 2; gz < count - 2; gz++) {
+    for (let gx = 1; gx < count - 1; gx++) {
+      for (let gz = 1; gz < count - 1; gz++) {
         if (fillerCount >= maxFillers) break;
         const key = `${gx},${gz}`;
         if (occupied.has(key)) continue;
-        if (Math.random() > 0.35) continue; // Don't fill everything
+        if (Math.random() > 0.55) continue;
 
-        const x = gx * gridSize + Math.random() * 0.5;
-        const z = gz * gridSize + Math.random() * 0.5;
-        const w = 0.8 + Math.random() * 1.0;
-        const d = 0.8 + Math.random() * 1.0;
-        const h = 1 + Math.random() * 15 + (Math.random() > 0.9 ? Math.random() * 30 : 0);
+        const x = gx * gridSize + (Math.random() - 0.5) * 0.8;
+        const z = gz * gridSize + (Math.random() - 0.5) * 0.8;
+        const w = 0.6 + Math.random() * 1.2;
+        const d = 0.6 + Math.random() * 1.2;
+        // Height distribution: mostly short, some medium, rare tall
+        let h = 0.8 + Math.random() * 5;
+        if (Math.random() > 0.7) h += Math.random() * 15;
+        if (Math.random() > 0.93) h += Math.random() * 35;
 
         const geo = new THREE.BoxGeometry(w, h, d);
         geo.translate(x, h / 2, z);
@@ -425,10 +405,10 @@ export class City {
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    // Subtle grid lines
-    const grid = new THREE.GridHelper(CITY_SIZE + 100, 80, 0x111122, 0x0a0a15);
+    // Very faint grid — almost invisible
+    const grid = new THREE.GridHelper(CITY_SIZE + 100, 150, 0x0c0c18, 0x08080f);
     grid.position.set(CITY_SIZE / 2, 0.01, CITY_SIZE / 2);
-    grid.material.opacity = 0.3;
+    grid.material.opacity = 0.15;
     grid.material.transparent = true;
     this.scene.add(grid);
   }
