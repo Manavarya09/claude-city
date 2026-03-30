@@ -1,0 +1,13 @@
+{
+  "name": "claude-city-marketplace",
+  "owner": { "name": "Manavarya Singh", "url": "https://github.com/Manavarya09" },
+  "plugins": [{
+    "name": "claude-city",
+    "source": "./",
+    "description": "Your codebase as a living 3D city. Launch with /city.",
+    "version": "1.0.0",
+    "author": { "name": "Manavarya Singh" },
+    "category": "visualization",
+    "tags": ["3d", "city", "visualization", "fun"]
+  }]
+}

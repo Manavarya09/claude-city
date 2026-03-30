@@ -1,0 +1,11 @@
+{
+  "name": "claude-city",
+  "description": "Visualize your codebase as a living 3D city. Files become buildings, folders become districts, bugs become fires, deploys become rockets. Launch with /city.",
+  "version": "1.0.0",
+  "author": { "name": "Manavarya Singh", "url": "https://github.com/Manavarya09" },
+  "homepage": "https://github.com/Manavarya09/claude-city",
+  "repository": "https://github.com/Manavarya09/claude-city",
+  "license": "MIT",
+  "keywords": ["3d", "visualization", "city", "codebase", "fun"],
+  "skills": "./skills/"
+}

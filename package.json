@@ -1,0 +1,17 @@
+{
+  "name": "claude-city",
+  "version": "1.0.0",
+  "description": "Your codebase as a living 3D city — files become buildings, folders become districts, bugs become fires",
+  "main": "scripts/analyze.js",
+  "scripts": {
+    "analyze": "node scripts/analyze.js",
+    "start": "node scripts/server.js",
+    "city": "node scripts/analyze.js . && node scripts/server.js"
+  },
+  "keywords": ["claude-code", "3d", "visualization", "threejs", "codebase", "city", "git"],
+  "author": "Manavarya Singh",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/Manavarya09/claude-city.git" },
+  "homepage": "https://github.com/Manavarya09/claude-city#readme",
+  "engines": { "node": ">=16.0.0" }
+}
