@@ -6,79 +6,79 @@
 <title>Claude City — Your Codebase in 3D</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { overflow: hidden; background: #0a0a1a; font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace; }
+  body { overflow: hidden; background: #87CEEB; font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace; }
   canvas { display: block; }
 
   /* Loading screen */
   #loading {
-    position: fixed; inset: 0; background: #0a0a1a; z-index: 1000;
+    position: fixed; inset: 0; background: #e8f0f8; z-index: 1000;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    color: #7aa2f7; font-size: 18px; transition: opacity 0.5s;
+    color: #2a5080; font-size: 18px; transition: opacity 0.5s;
   }
   #loading.hide { opacity: 0; pointer-events: none; }
   #loading h1 { font-size: 36px; margin-bottom: 8px; }
-  #loading h1 span { color: #f0883e; }
-  #loading p { color: #565f89; font-size: 14px; }
-  .loader { width: 40px; height: 40px; border: 3px solid #222; border-top-color: #7aa2f7;
+  #loading h1 span { color: #e07030; }
+  #loading p { color: #6080a0; font-size: 14px; }
+  .loader { width: 40px; height: 40px; border: 3px solid #c0d0e0; border-top-color: #2a5080;
     border-radius: 50%; animation: spin 0.8s linear infinite; margin: 20px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Top bar */
   #top-bar {
     position: fixed; top: 0; left: 0; right: 0; height: 44px; z-index: 100;
-    background: rgba(10,10,26,0.85); backdrop-filter: blur(10px);
-    border-bottom: 1px solid #1a1a3e; display: flex; align-items: center;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
+    border-bottom: 1px solid #d0d8e0; display: flex; align-items: center;
     justify-content: space-between; padding: 0 16px;
   }
   .top-left { display: flex; align-items: center; gap: 16px; }
-  .city-name { color: #7aa2f7; font-size: 16px; font-weight: 700; }
-  .stat { color: #565f89; font-size: 12px; }
+  .city-name { color: #2a5080; font-size: 16px; font-weight: 700; }
+  .stat { color: #708090; font-size: 12px; }
   .top-right { display: flex; gap: 6px; }
   .ctrl-btn {
-    background: rgba(30,30,50,0.8); border: 1px solid #2a2a4a; border-radius: 6px;
-    color: #aaa; font-size: 16px; padding: 4px 8px; cursor: pointer;
+    background: rgba(240,244,248,0.9); border: 1px solid #c0ccd8; border-radius: 6px;
+    color: #555; font-size: 16px; padding: 4px 8px; cursor: pointer;
     transition: background 0.2s;
   }
-  .ctrl-btn:hover { background: rgba(50,50,80,0.8); }
+  .ctrl-btn:hover { background: rgba(220,230,240,0.9); }
 
   /* Tooltip */
   #tooltip {
-    position: fixed; z-index: 200; background: rgba(15,15,30,0.95); backdrop-filter: blur(8px);
-    border: 1px solid #2a2a5a; border-radius: 8px; padding: 12px 16px;
-    pointer-events: none; max-width: 280px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    position: fixed; z-index: 200; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px);
+    border: 1px solid #c0ccd8; border-radius: 8px; padding: 12px 16px;
+    pointer-events: none; max-width: 280px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   }
-  .tt-name { color: #c0caf5; font-size: 14px; font-weight: 700; }
-  .tt-path { color: #565f89; font-size: 11px; margin-bottom: 8px; word-break: break-all; }
-  .tt-row { display: flex; justify-content: space-between; color: #8b949e; font-size: 12px; margin: 2px 0; }
-  .tt-row strong { color: #c0caf5; }
-  .tt-test { color: #9ece6a; font-size: 11px; margin-top: 6px; }
-  .tt-bug { color: #f7768e; font-size: 11px; margin-top: 2px; }
+  .tt-name { color: #1a3050; font-size: 14px; font-weight: 700; }
+  .tt-path { color: #6080a0; font-size: 11px; margin-bottom: 8px; word-break: break-all; }
+  .tt-row { display: flex; justify-content: space-between; color: #506070; font-size: 12px; margin: 2px 0; }
+  .tt-row strong { color: #1a3050; }
+  .tt-test { color: #2a8a4a; font-size: 11px; margin-top: 6px; }
+  .tt-bug { color: #cc3030; font-size: 11px; margin-top: 2px; }
 
   /* Legend */
   #legend {
     position: fixed; bottom: 16px; left: 16px; z-index: 100;
-    background: rgba(15,15,30,0.85); backdrop-filter: blur(8px);
-    border: 1px solid #2a2a4a; border-radius: 8px; padding: 12px 16px;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(8px);
+    border: 1px solid #c0ccd8; border-radius: 8px; padding: 12px 16px;
   }
-  .legend-title { color: #565f89; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-  .legend-item { color: #8b949e; font-size: 12px; display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  .legend-title { color: #708090; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .legend-item { color: #506070; font-size: 12px; display: flex; align-items: center; gap: 6px; margin: 3px 0; }
   .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
   /* Activity feed */
   #activity-feed {
     position: fixed; bottom: 16px; right: 16px; z-index: 100;
-    background: rgba(15,15,30,0.85); backdrop-filter: blur(8px);
-    border: 1px solid #2a2a4a; border-radius: 8px; padding: 12px 16px;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(8px);
+    border: 1px solid #c0ccd8; border-radius: 8px; padding: 12px 16px;
     max-width: 280px; max-height: 200px; overflow-y: auto;
   }
-  .feed-title { color: #565f89; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-  .feed-item { color: #8b949e; font-size: 11px; padding: 3px 0; border-bottom: 1px solid #1a1a3a; }
+  .feed-title { color: #708090; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .feed-item { color: #506070; font-size: 11px; padding: 3px 0; border-bottom: 1px solid #e0e8f0; }
   .feed-item:last-child { border-bottom: none; }
 
   /* Help text */
   #help-text {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 100;
-    color: #3a3a5a; font-size: 11px; pointer-events: none;
+    color: #8090a0; font-size: 11px; pointer-events: none;
   }
 </style>
 </head>
@@ -115,11 +115,11 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.8;
+renderer.toneMappingExposure = 1.5;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0a1a);
+scene.background = new THREE.Color(0x87CEEB);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 500);
 

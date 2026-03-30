@@ -1,11 +1,24 @@
-// city.js — Dense cyberpunk night city with InstancedMesh, glowing windows, packed layout
+// city.js — Bright daytime NYC-style city with high performance
 import * as THREE from 'three';
 
-const CITY_SIZE = 300;
-const ROAD_GAP = 0.4;
-const MAX_HEIGHT = 60;
-const MIN_HEIGHT = 0.8;
-const FILL_DENSITY = 3; // Multiplier for filler buildings
+const CITY_SIZE = 250;
+const ROAD_GAP = 0.5;
+const MAX_HEIGHT = 50;
+const MIN_HEIGHT = 0.5;
+
+// NYC building palette
+const BUILDING_COLORS = [
+  0xc8cdd0, // concrete grey
+  0xb0b8bf, // steel grey
+  0x8faabe, // glass blue
+  0x6b9ac4, // sky blue glass
+  0xd4c5a9, // sandstone
+  0xc2b280, // beige
+  0xa89070, // brownstone
+  0xe0ddd5, // white concrete
+  0x9aabb8, // blue steel
+  0xbfc9ce, // light grey
+];
 
 export class City {
   constructor(scene, data) {
@@ -13,30 +26,12 @@ export class City {
     this.data = data;
     this.buildings = [];
     this.buildingGroup = new THREE.Group();
-    this.windowGroup = new THREE.Group();
-    this.districtGroup = new THREE.Group();
     this.labelGroup = new THREE.Group();
     this.roadGroup = new THREE.Group();
 
     this.scene.add(this.buildingGroup);
-    this.scene.add(this.windowGroup);
-    this.scene.add(this.districtGroup);
     this.scene.add(this.labelGroup);
     this.scene.add(this.roadGroup);
-
-    // Shared materials — visible dark blue buildings with slight sheen
-    this.buildingMat = new THREE.MeshStandardMaterial({
-      color: 0x1a1a30,
-      roughness: 0.5,
-      metalness: 0.6,
-      emissive: 0x050510,
-      emissiveIntensity: 0.3,
-    });
-    this.windowMat = new THREE.MeshBasicMaterial({
-      color: 0xaaccff,
-      transparent: true,
-      opacity: 1.0,
-    });
   }
 
   build() {
@@ -45,140 +40,58 @@ export class City {
 
     const maxLoc = Math.max(...files.map(f => f.metrics?.loc || 1), 100);
 
-    // Layout
     const layout = this.computeTreemap(this.data.tree, 0, 0, CITY_SIZE, CITY_SIZE);
 
     this.createGround();
 
-    // Merge all buildings into batches for performance
-    const buildingGeos = [];
-    const windowGeos = [];
-
+    // Build all real buildings as individual meshes (for color variety + raycasting)
     for (const item of layout) {
       if (item.type === 'file') {
-        const { geos, wins } = this.buildBuilding(item, maxLoc);
-        buildingGeos.push(...geos);
-        windowGeos.push(...wins);
+        this.createBuilding(item, maxLoc);
       } else if (item.type === 'district') {
         this.createDistrict(item);
       }
     }
 
-    // Add filler buildings to fill gaps and increase density
-    const fillerResult = this.generateFillerBuildings(layout);
-    buildingGeos.push(...fillerResult.geos);
-    windowGeos.push(...fillerResult.wins);
-
-    // Merge building geometries into single mesh for performance
-    if (buildingGeos.length > 0) {
-      const merged = this.mergeGeometries(buildingGeos);
-      const buildingMesh = new THREE.Mesh(merged, this.buildingMat);
-      buildingMesh.castShadow = true;
-      buildingMesh.receiveShadow = true;
-      this.buildingGroup.add(buildingMesh);
-    }
-
-    // Merge window geometries
-    if (windowGeos.length > 0) {
-      const mergedWins = this.mergeGeometries(windowGeos);
-      const windowMesh = new THREE.Mesh(mergedWins, this.windowMat);
-      this.windowGroup.add(windowMesh);
-    }
-
-    // Individual meshes for raycasting (invisible, thin)
-    for (const item of layout) {
-      if (item.type === 'file') {
-        this.createHitbox(item, maxLoc);
-      }
-    }
+    // Filler buildings (merged for performance)
+    this.generateFillerBuildings(layout);
 
     // Roads
     this.createRoads(layout);
   }
 
-  buildBuilding(item, maxLoc) {
+  createBuilding(item, maxLoc) {
     const loc = item.metrics?.loc || 1;
     const height = MIN_HEIGHT + (loc / maxLoc) * MAX_HEIGHT;
     const { x, z, w, d } = item.layout;
-    const geos = [];
-    const wins = [];
 
-    // Main building body
-    const geo = new THREE.BoxGeometry(w - ROAD_GAP, height, d - ROAD_GAP);
-    geo.translate(x, height / 2, z);
-    geos.push(geo);
+    const bw = Math.max(w - ROAD_GAP, 0.4);
+    const bd = Math.max(d - ROAD_GAP, 0.4);
 
-    // Rooftop detail (smaller box on top for variety)
-    if (height > 8 && Math.random() > 0.4) {
-      const roofW = (w - ROAD_GAP) * (0.3 + Math.random() * 0.4);
-      const roofD = (d - ROAD_GAP) * (0.3 + Math.random() * 0.4);
-      const roofH = height * (0.1 + Math.random() * 0.2);
-      const roofGeo = new THREE.BoxGeometry(roofW, roofH, roofD);
-      roofGeo.translate(x, height + roofH / 2, z);
-      geos.push(roofGeo);
-    }
+    // Pick color based on language
+    const langColors = {
+      typescript: 0x6b9ac4, javascript: 0xe8c840, python: 0x5a8fa8,
+      rust: 0xc8855a, go: 0x5abfcf, java: 0xb07830,
+      ruby: 0xa85050, css: 0x9070b8, html: 0xd06030,
+      shell: 0x80b850, json: 0x60c088, markdown: 0x8090b0,
+      default: BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)]
+    };
+    const color = langColors[item.metrics?.language] || langColors.default;
 
-    // Antenna on tall buildings
-    if (height > 25 && Math.random() > 0.5) {
-      const antennaGeo = new THREE.CylinderGeometry(0.05, 0.05, height * 0.3, 4);
-      antennaGeo.translate(x, height + height * 0.15, z);
-      geos.push(antennaGeo);
-    }
-
-    // Windows — fewer but bigger and brighter for performance
-    const bw = w - ROAD_GAP;
-    const bd = d - ROAD_GAP;
-
-    if (height > 2) {
-      const floorH = 1.5;
-      const floors = Math.min(Math.floor(height / floorH), 25);
-      const wSize = Math.min(bw * 0.25, 0.4);
-      const wCount = Math.max(1, Math.floor(bw / (wSize * 2.5)));
-
-      for (let f = 1; f < floors; f++) {
-        const fy = f * floorH;
-        // Front face only (z+) — biggest perf win
-        for (let wi = 0; wi < wCount; wi++) {
-          if (Math.random() > 0.55) continue;
-          const wGeo = new THREE.PlaneGeometry(wSize, wSize * 0.7);
-          wGeo.translate(x - bw / 2 + (wi + 0.5) * (bw / wCount), fy, z + bd / 2 + 0.03);
-          wins.push(wGeo);
-        }
-        // Right face (x+) — every other floor
-        if (f % 2 === 0) {
-          const dCount = Math.max(1, Math.floor(bd / (wSize * 2.5)));
-          for (let di = 0; di < dCount; di++) {
-            if (Math.random() > 0.5) continue;
-            const wGeo = new THREE.PlaneGeometry(wSize, wSize * 0.7);
-            wGeo.rotateY(Math.PI / 2);
-            wGeo.translate(x + bw / 2 + 0.03, fy, z - bd / 2 + (di + 0.5) * (bd / dCount));
-            wins.push(wGeo);
-          }
-        }
-      }
-    }
-
-    // Store for later
-    this.buildings.push({
-      data: item,
-      position: new THREE.Vector3(x, height / 2, z),
-      height,
-      mesh: null // will be set by hitbox
+    // Main building
+    const geo = new THREE.BoxGeometry(bw, height, bd);
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      roughness: 0.4,
+      metalness: 0.2,
+      flatShading: false,
     });
-
-    return { geos, wins };
-  }
-
-  createHitbox(item, maxLoc) {
-    const loc = item.metrics?.loc || 1;
-    const height = MIN_HEIGHT + (loc / maxLoc) * MAX_HEIGHT;
-    const { x, z, w, d } = item.layout;
-
-    // Invisible hitbox for raycasting
-    const geo = new THREE.BoxGeometry(w, height, d);
-    const mat = new THREE.MeshBasicMaterial({ visible: false });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(x, height / 2, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    // Metadata
     mesh.userData = {
       type: 'building',
       name: item.name,
@@ -192,137 +105,136 @@ export class City {
       age_days: item.metrics?.age_days,
       height
     };
-    this.buildingGroup.add(mesh);
 
-    // Update building reference
-    const building = this.buildings.find(b => b.data.path === item.path);
-    if (building) building.mesh = mesh;
+    this.buildingGroup.add(mesh);
+    this.buildings.push({ mesh, data: item, position: mesh.position, height });
+
+    // Rooftop detail on taller buildings
+    if (height > 10 && Math.random() > 0.3) {
+      const roofW = bw * (0.2 + Math.random() * 0.3);
+      const roofD = bd * (0.2 + Math.random() * 0.3);
+      const roofH = 1 + Math.random() * 3;
+      const roofGeo = new THREE.BoxGeometry(roofW, roofH, roofD);
+      const roofMat = new THREE.MeshStandardMaterial({ color: 0x667788, roughness: 0.6, metalness: 0.3 });
+      const roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.set(x, height + roofH / 2, z);
+      roof.castShadow = true;
+      this.buildingGroup.add(roof);
+    }
+
+    // Antenna on skyscrapers
+    if (height > 30 && Math.random() > 0.5) {
+      const antGeo = new THREE.CylinderGeometry(0.06, 0.06, height * 0.25, 4);
+      const antMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.3 });
+      const ant = new THREE.Mesh(antGeo, antMat);
+      ant.position.set(x, height + height * 0.125, z);
+      this.buildingGroup.add(ant);
+    }
   }
 
   generateFillerBuildings(layout) {
-    const geos = [];
-    const wins = [];
     const occupied = new Set();
 
-    // Mark occupied grid cells
     for (const item of layout) {
       if (item.type === 'file' && item.layout) {
-        const { x, z } = item.layout;
-        const gx = Math.floor(x / 2);
-        const gz = Math.floor(z / 2);
-        for (let dx = -1; dx <= 1; dx++) {
-          for (let dz = -1; dz <= 1; dz++) {
+        const gx = Math.floor(item.layout.x / 2.5);
+        const gz = Math.floor(item.layout.z / 2.5);
+        for (let dx = -1; dx <= 1; dx++)
+          for (let dz = -1; dz <= 1; dz++)
             occupied.add(`${gx + dx},${gz + dz}`);
-          }
-        }
       }
     }
 
-    // Fill empty spaces densely with ambient buildings
-    const gridSize = 1.8;
-    const count = Math.floor(CITY_SIZE / gridSize);
-    let fillerCount = 0;
-    const maxFillers = Math.max(2000, this.buildings.length * 8);
+    const gridSize = 2.5;
+    const gridCount = Math.floor(CITY_SIZE / gridSize);
+    let count = 0;
+    const maxFillers = 1500;
 
-    for (let gx = 1; gx < count - 1; gx++) {
-      for (let gz = 1; gz < count - 1; gz++) {
-        if (fillerCount >= maxFillers) break;
-        const key = `${gx},${gz}`;
-        if (occupied.has(key)) continue;
-        if (Math.random() > 0.55) continue;
+    // Merge filler geos for performance
+    const geos = [];
 
-        const x = gx * gridSize + (Math.random() - 0.5) * 0.8;
-        const z = gz * gridSize + (Math.random() - 0.5) * 0.8;
-        const w = 0.6 + Math.random() * 1.2;
-        const d = 0.6 + Math.random() * 1.2;
-        // Height distribution: mostly short, some medium, rare tall
-        let h = 0.8 + Math.random() * 5;
-        if (Math.random() > 0.7) h += Math.random() * 15;
-        if (Math.random() > 0.93) h += Math.random() * 35;
+    for (let gx = 1; gx < gridCount - 1; gx++) {
+      for (let gz = 1; gz < gridCount - 1; gz++) {
+        if (count >= maxFillers) break;
+        if (occupied.has(`${gx},${gz}`)) continue;
+        if (Math.random() > 0.45) continue;
+
+        const x = gx * gridSize + (Math.random() - 0.5);
+        const z = gz * gridSize + (Math.random() - 0.5);
+        const w = 0.8 + Math.random() * 1.5;
+        const d = 0.8 + Math.random() * 1.5;
+
+        // Height: mostly low-rise, some mid, rare tall
+        let h = 1 + Math.random() * 4;
+        if (Math.random() > 0.7) h += Math.random() * 12;
+        if (Math.random() > 0.95) h += Math.random() * 25;
 
         const geo = new THREE.BoxGeometry(w, h, d);
         geo.translate(x, h / 2, z);
         geos.push(geo);
 
-        // Windows for taller fillers
-        if (h > 3) {
-          const floors = Math.min(Math.floor(h / 1.2), 20);
-          for (let f = 1; f < floors; f++) {
-            if (Math.random() > 0.5) continue;
-            const wGeo = new THREE.PlaneGeometry(0.2, 0.2);
-            wGeo.translate(x, f * 1.2, z + d / 2 + 0.02);
-            wins.push(wGeo);
-
-            if (Math.random() > 0.5) {
-              const wGeo2 = new THREE.PlaneGeometry(0.2, 0.2);
-              wGeo2.rotateY(Math.PI / 2);
-              wGeo2.translate(x + w / 2 + 0.02, f * 1.2, z);
-              wins.push(wGeo2);
-            }
-          }
-        }
-
-        occupied.add(key);
-        fillerCount++;
+        occupied.add(`${gx},${gz}`);
+        count++;
       }
-      if (fillerCount >= maxFillers) break;
+      if (count >= maxFillers) break;
     }
 
-    return { geos, wins };
+    // Merge into single mesh
+    if (geos.length > 0) {
+      const merged = this.mergeGeometries(geos);
+      const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0xb8bfc8,
+        roughness: 0.5,
+        metalness: 0.15,
+      });
+      const mesh = new THREE.Mesh(merged, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      this.buildingGroup.add(mesh);
+    }
   }
 
   mergeGeometries(geos) {
-    // Manual merge: combine all buffer geometries into one
-    let totalVerts = 0;
-    let totalIndices = 0;
+    let totalVerts = 0, totalIdx = 0;
     for (const g of geos) {
       totalVerts += g.attributes.position.count;
-      totalIndices += g.index ? g.index.count : g.attributes.position.count;
+      totalIdx += g.index ? g.index.count : g.attributes.position.count;
     }
 
-    const positions = new Float32Array(totalVerts * 3);
-    const normals = new Float32Array(totalVerts * 3);
-    const indices = new Uint32Array(totalIndices);
-
-    let vertOffset = 0;
-    let indexOffset = 0;
-    let vertCount = 0;
+    const pos = new Float32Array(totalVerts * 3);
+    const norm = new Float32Array(totalVerts * 3);
+    const idx = new Uint32Array(totalIdx);
+    let vOff = 0, iOff = 0;
 
     for (const g of geos) {
-      const pos = g.attributes.position;
-      const norm = g.attributes.normal;
-
-      for (let i = 0; i < pos.count; i++) {
-        positions[(vertCount + i) * 3] = pos.getX(i);
-        positions[(vertCount + i) * 3 + 1] = pos.getY(i);
-        positions[(vertCount + i) * 3 + 2] = pos.getZ(i);
-        if (norm) {
-          normals[(vertCount + i) * 3] = norm.getX(i);
-          normals[(vertCount + i) * 3 + 1] = norm.getY(i);
-          normals[(vertCount + i) * 3 + 2] = norm.getZ(i);
+      const gPos = g.attributes.position;
+      const gNorm = g.attributes.normal;
+      for (let i = 0; i < gPos.count; i++) {
+        pos[(vOff + i) * 3] = gPos.getX(i);
+        pos[(vOff + i) * 3 + 1] = gPos.getY(i);
+        pos[(vOff + i) * 3 + 2] = gPos.getZ(i);
+        if (gNorm) {
+          norm[(vOff + i) * 3] = gNorm.getX(i);
+          norm[(vOff + i) * 3 + 1] = gNorm.getY(i);
+          norm[(vOff + i) * 3 + 2] = gNorm.getZ(i);
         }
       }
-
       if (g.index) {
-        for (let i = 0; i < g.index.count; i++) {
-          indices[indexOffset + i] = g.index.getX(i) + vertCount;
-        }
-        indexOffset += g.index.count;
+        for (let i = 0; i < g.index.count; i++) idx[iOff + i] = g.index.getX(i) + vOff;
+        iOff += g.index.count;
       } else {
-        for (let i = 0; i < pos.count; i++) {
-          indices[indexOffset + i] = vertCount + i;
-        }
-        indexOffset += pos.count;
+        for (let i = 0; i < gPos.count; i++) idx[iOff + i] = vOff + i;
+        iOff += gPos.count;
       }
-
-      vertCount += pos.count;
+      vOff += gPos.count;
       g.dispose();
     }
 
     const merged = new THREE.BufferGeometry();
-    merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    merged.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-    merged.setIndex(new THREE.BufferAttribute(indices.slice(0, indexOffset), 1));
+    merged.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    merged.setAttribute('normal', new THREE.BufferAttribute(norm, 3));
+    merged.setIndex(new THREE.BufferAttribute(idx.slice(0, iOff), 1));
     merged.computeVertexNormals();
     return merged;
   }
@@ -368,7 +280,6 @@ export class City {
       for (const node of row) {
         const fraction = getValue(node) / rowValue;
         const itemSize = crossSize * fraction;
-
         const ix = horizontal ? rx : rx + offset;
         const iy = horizontal ? ry + offset : ry;
         const iw = horizontal ? rowSize : itemSize;
@@ -393,30 +304,37 @@ export class City {
   }
 
   createGround() {
-    const groundGeo = new THREE.PlaneGeometry(CITY_SIZE + 100, CITY_SIZE + 100);
+    // Asphalt ground
+    const groundGeo = new THREE.PlaneGeometry(CITY_SIZE + 80, CITY_SIZE + 80);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x080810,
-      roughness: 0.95,
-      metalness: 0.1,
+      color: 0x404850,
+      roughness: 0.9,
+      metalness: 0.05,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(CITY_SIZE / 2, -0.01, CITY_SIZE / 2);
     ground.receiveShadow = true;
     this.scene.add(ground);
-
-    // Very faint grid — almost invisible
-    const grid = new THREE.GridHelper(CITY_SIZE + 100, 150, 0x0c0c18, 0x08080f);
-    grid.position.set(CITY_SIZE / 2, 0.01, CITY_SIZE / 2);
-    grid.material.opacity = 0.15;
-    grid.material.transparent = true;
-    this.scene.add(grid);
   }
 
   createDistrict(item) {
     const { x, z, w, d } = item.layout;
+
+    // District road lines
+    const points = [
+      new THREE.Vector3(x, 0.05, z),
+      new THREE.Vector3(x + w, 0.05, z),
+      new THREE.Vector3(x + w, 0.05, z + d),
+      new THREE.Vector3(x, 0.05, z + d),
+      new THREE.Vector3(x, 0.05, z),
+    ];
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const mat = new THREE.LineBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0.15 });
+    this.roadGroup.add(new THREE.Line(geo, mat));
+
     if (w > 8 && d > 8) {
-      const label = this.createLabel(item.name, x + w / 2, 1, z + d / 2);
+      const label = this.createLabel(item.name, x + w / 2, 0.3, z + d / 2);
       this.labelGroup.add(label);
     }
   }
@@ -427,15 +345,15 @@ export class City {
     canvas.height = 64;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, 512, 64);
-    ctx.fillStyle = '#4466aa';
-    ctx.font = 'bold 24px monospace';
+    ctx.fillStyle = '#556677';
+    ctx.font = 'bold 22px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(text.toUpperCase().slice(0, 20), 256, 40);
     const texture = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 0.5 });
+    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, opacity: 0.6 });
     const sprite = new THREE.Sprite(mat);
     sprite.position.set(x, y, z);
-    sprite.scale.set(12, 1.5, 1);
+    sprite.scale.set(10, 1.3, 1);
     return sprite;
   }
 
@@ -444,31 +362,24 @@ export class City {
     for (const item of layout) {
       if (item.type === 'file' && item.layout) filePositions[item.path] = item.layout;
     }
-    const deps = (this.data.dependencies || []).slice(0, 300);
-    const roadMat = new THREE.LineBasicMaterial({ color: 0x223355, transparent: true, opacity: 0.08 });
+    const deps = (this.data.dependencies || []).slice(0, 200);
+    const mat = new THREE.LineBasicMaterial({ color: 0x889999, transparent: true, opacity: 0.1 });
 
     for (const dep of deps) {
       const from = filePositions[dep.from];
       const to = filePositions[dep.to];
       if (!from || !to) continue;
-      const mid = new THREE.Vector3((from.x + to.x) / 2, 3, (from.z + to.z) / 2);
       const curve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(from.x, 0.2, from.z), mid,
+        new THREE.Vector3(from.x, 0.2, from.z),
+        new THREE.Vector3((from.x + to.x) / 2, 2, (from.z + to.z) / 2),
         new THREE.Vector3(to.x, 0.2, to.z)
       );
-      const geo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(16));
-      this.roadGroup.add(new THREE.Line(geo, roadMat));
+      this.roadGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(12)), mat));
     }
   }
 
   update(time) {
-    // Animate window glow
-    if (this.windowGroup.children[0]) {
-      this.windowGroup.children[0].material.opacity = 0.7 + 0.2 * Math.sin(time * 0.5);
-      // Shift window color slightly over time
-      const hue = 0.6 + 0.05 * Math.sin(time * 0.3);
-      this.windowGroup.children[0].material.color.setHSL(hue, 0.5, 0.7);
-    }
+    // Nothing heavy — keep it smooth
   }
 
   getBuildingAt(raycaster) {
