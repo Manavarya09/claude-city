@@ -227,7 +227,11 @@ goBtn.addEventListener('click', startBuild);
 repoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') startBuild(); });
 
 async function startBuild() {
-  const input = repoInput.value.trim().replace('https://github.com/', '').replace(/\/$/, '');
+  const input = repoInput.value.trim()
+    .replace(/^https?:\/\/(www\.)?github\.com\//, '')
+    .replace(/\.git$/, '')
+    .replace(/\/$/, '')
+    .replace(/^\//, '');
   if (!input || !input.includes('/')) {
     errorMsg.textContent = 'Please enter a valid repo: owner/repo';
     return;
