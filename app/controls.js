@@ -35,62 +35,55 @@ export class CityControls {
   }
 
   createOverlay() {
-    // Top bar
-    const topBar = document.createElement('div');
-    topBar.id = 'top-bar';
-    topBar.innerHTML = `
-      <div class="top-left">
-        <span class="city-name">${this.data.name || 'Code City'}</span>
-        <span class="stat">${this.data.stats?.files || 0} buildings</span>
-        <span class="stat">${this.formatNumber(this.data.stats?.loc || 0)} LOC</span>
-        <span class="stat">${this.data.stats?.commits || 0} commits</span>
-        <span class="stat">${this.data.stats?.contributors || 0} devs</span>
-      </div>
-      <div class="top-right">
-        <button id="btn-toggle-fires" class="ctrl-btn" title="Toggle fires">🔥</button>
-        <button id="btn-toggle-roads" class="ctrl-btn" title="Toggle roads">🛣️</button>
-        <button id="btn-rocket" class="ctrl-btn" title="Launch rocket">🚀</button>
-        <button id="btn-reset-cam" class="ctrl-btn" title="Reset camera">📷</button>
-      </div>
+    // Top bar — use existing element from HTML
+    const topBar = document.getElementById('top-bar');
+    const starsText = this.data.stats?.stars ? ` · ⭐ ${this.formatNumber(this.data.stats.stars)}` : '';
+    topBar.querySelector('.top-left').innerHTML = `
+      <button class="back-btn" id="btn-back">← Back</button>
+      <span class="city-name">${this.data.fullName || this.data.name || 'Code City'}</span>
+      <span class="stat"><strong>${this.data.stats?.files || 0}</strong> buildings</span>
+      <span class="stat"><strong>${this.formatNumber(this.data.stats?.loc || 0)}</strong> LOC</span>
+      <span class="stat"><strong>${this.data.stats?.contributors || 0}</strong> devs${starsText}</span>
     `;
-    document.body.appendChild(topBar);
+    topBar.querySelector('.top-right').innerHTML = `
+      <button id="btn-toggle-fires" class="ctrl-btn" title="Toggle fires">🔥</button>
+      <button id="btn-toggle-roads" class="ctrl-btn" title="Toggle roads">🛣️</button>
+      <button id="btn-rocket" class="ctrl-btn" title="Launch rocket">🚀</button>
+      <button id="btn-reset-cam" class="ctrl-btn" title="Reset camera">📷</button>
+    `;
 
-    // Tooltip
-    const tooltip = document.createElement('div');
-    tooltip.id = 'tooltip';
-    tooltip.style.display = 'none';
-    document.body.appendChild(tooltip);
-    this.tooltip = tooltip;
+    document.getElementById('btn-back')?.addEventListener('click', () => location.reload());
+
+    // Tooltip — use existing
+    this.tooltip = document.getElementById('tooltip');
 
     // Legend
-    const legend = document.createElement('div');
-    legend.id = 'legend';
+    const legend = document.getElementById('legend');
     const languages = this.data.stats?.languages || {};
     const topLangs = Object.entries(languages).sort((a, b) => b[1] - a[1]).slice(0, 8);
     const langColors = {
+      JavaScript: '#f7df1e', TypeScript: '#3178c6', Python: '#3572A5',
+      Rust: '#dea584', Go: '#00ADD8', Java: '#b07219', Ruby: '#701516',
+      HTML: '#e34c26', CSS: '#563d7c', Vue: '#41b883', Svelte: '#ff3e00',
+      Shell: '#89e051', 'C++': '#f34b7d', C: '#555555', PHP: '#4F5D95',
       javascript: '#f7df1e', typescript: '#3178c6', python: '#3572A5',
       rust: '#dea584', go: '#00ADD8', java: '#b07219', ruby: '#701516',
-      html: '#e34c26', css: '#563d7c', vue: '#41b883', svelte: '#ff3e00',
-      shell: '#89e051', json: '#40d47e', markdown: '#083fa1', other: '#8b949e'
     };
     legend.innerHTML = `<div class="legend-title">Languages</div>` +
       topLangs.map(([lang, count]) =>
-        `<div class="legend-item"><span class="legend-dot" style="background:${langColors[lang] || '#8b949e'}"></span>${lang} (${count})</div>`
+        `<div class="legend-item"><span class="legend-dot" style="background:${langColors[lang] || '#8b949e'}"></span>${lang} (${typeof count === 'number' && count > 1000 ? this.formatNumber(count) + ' bytes' : count})</div>`
       ).join('');
-    document.body.appendChild(legend);
 
     // Activity feed
-    const feed = document.createElement('div');
-    feed.id = 'activity-feed';
-    feed.innerHTML = '<div class="feed-title">Recent Activity</div>';
+    const feed = document.getElementById('activity-feed');
+    feed.innerHTML = '<div class="feed-title">Recent Commits</div>';
     const activities = (this.data.recent_activity || []).slice(0, 8);
     for (const a of activities) {
       const el = document.createElement('div');
       el.className = 'feed-item';
-      el.textContent = `${a.author}: ${a.type} ${a.file?.split('/').pop() || ''}`;
+      el.innerHTML = `<span class="feed-author">${a.author}</span>: ${(a.message || a.type || '').slice(0, 50)}`;
       feed.appendChild(el);
     }
-    document.body.appendChild(feed);
   }
 
   onMouseMove(event) {

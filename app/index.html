@@ -3,94 +3,176 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Claude City — Your Codebase in 3D</title>
+<title>Claude City — See Your Code as a 3D City</title>
+<meta name="description" content="Turn any GitHub repo into a stunning 3D city. Files become buildings, folders become districts, bugs become fires.">
+<meta property="og:title" content="Claude City — Your Code as a 3D City">
+<meta property="og:description" content="Turn any GitHub repo into a stunning 3D city visualization.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { overflow: hidden; background: #87CEEB; font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace; }
+  body { overflow: hidden; background: #1a1a2e; font-family: 'Inter', sans-serif; }
   canvas { display: block; }
 
-  /* Loading screen */
-  #loading {
-    position: fixed; inset: 0; background: #e8f0f8; z-index: 1000;
+  /* --- Landing Page --- */
+  #landing {
+    position: fixed; inset: 0; z-index: 500;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    color: #2a5080; font-size: 18px; transition: opacity 0.5s;
+    transition: opacity 0.6s ease;
   }
-  #loading.hide { opacity: 0; pointer-events: none; }
-  #loading h1 { font-size: 36px; margin-bottom: 8px; }
-  #loading h1 span { color: #e07030; }
-  #loading p { color: #6080a0; font-size: 14px; }
-  .loader { width: 40px; height: 40px; border: 3px solid #c0d0e0; border-top-color: #2a5080;
-    border-radius: 50%; animation: spin 0.8s linear infinite; margin: 20px; }
+  #landing.hide { opacity: 0; pointer-events: none; }
+  #landing h1 {
+    font-size: 56px; font-weight: 800; color: #fff;
+    letter-spacing: -2px; margin-bottom: 8px;
+  }
+  #landing h1 span { background: linear-gradient(90deg, #ff6b35, #f7c948); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  #landing .subtitle { color: #8899bb; font-size: 18px; margin-bottom: 40px; }
+  #landing .input-group {
+    display: flex; gap: 0; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  }
+  #landing input {
+    width: 420px; padding: 16px 20px; font-size: 16px; border: none;
+    background: rgba(255,255,255,0.95); color: #1a1a2e; font-family: 'Inter', sans-serif;
+    outline: none;
+  }
+  #landing input::placeholder { color: #999; }
+  #landing button {
+    padding: 16px 32px; font-size: 16px; font-weight: 700; border: none;
+    background: linear-gradient(90deg, #ff6b35, #e84118); color: white;
+    cursor: pointer; transition: transform 0.2s;
+  }
+  #landing button:hover { transform: scale(1.02); }
+  #landing .examples { margin-top: 24px; color: #667; font-size: 13px; }
+  #landing .examples a {
+    color: #7aa2f7; text-decoration: none; cursor: pointer;
+    margin: 0 6px; transition: color 0.2s;
+  }
+  #landing .examples a:hover { color: #ff6b35; }
+  #landing .error { color: #ff6b6b; font-size: 14px; margin-top: 12px; min-height: 20px; }
+  #landing .credit { position: absolute; bottom: 20px; color: #445; font-size: 12px; }
+  #landing .credit a { color: #667; text-decoration: none; }
+
+  /* --- Loading --- */
+  #loading {
+    position: fixed; inset: 0; z-index: 400;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    color: #fff;
+  }
+  #loading.show { display: flex; }
+  #loading h2 { font-size: 24px; margin-bottom: 12px; }
+  #loading .status { color: #8899bb; font-size: 14px; margin-bottom: 24px; }
+  .loader { width: 44px; height: 44px; border: 3px solid #222; border-top-color: #ff6b35;
+    border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Top bar */
+  /* --- City UI --- */
   #top-bar {
-    position: fixed; top: 0; left: 0; right: 0; height: 44px; z-index: 100;
-    background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
-    border-bottom: 1px solid #d0d8e0; display: flex; align-items: center;
-    justify-content: space-between; padding: 0 16px;
+    position: fixed; top: 0; left: 0; right: 0; height: 48px; z-index: 100;
+    background: rgba(255,255,255,0.88); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+    display: none;
   }
-  .top-left { display: flex; align-items: center; gap: 16px; }
-  .city-name { color: #2a5080; font-size: 16px; font-weight: 700; }
-  .stat { color: #708090; font-size: 12px; }
-  .top-right { display: flex; gap: 6px; }
+  #top-bar.show { display: flex; }
+  .top-left { display: flex; align-items: center; gap: 20px; }
+  .city-name { color: #1a1a2e; font-size: 16px; font-weight: 700; }
+  .stat { color: #888; font-size: 12px; }
+  .stat strong { color: #333; }
+  .top-right { display: flex; gap: 8px; align-items: center; }
   .ctrl-btn {
-    background: rgba(240,244,248,0.9); border: 1px solid #c0ccd8; border-radius: 6px;
-    color: #555; font-size: 16px; padding: 4px 8px; cursor: pointer;
-    transition: background 0.2s;
+    background: #f0f2f5; border: 1px solid #ddd; border-radius: 8px;
+    color: #555; font-size: 15px; padding: 6px 10px; cursor: pointer;
+    transition: all 0.2s;
   }
-  .ctrl-btn:hover { background: rgba(220,230,240,0.9); }
+  .ctrl-btn:hover { background: #e4e8ec; }
+  .back-btn {
+    background: none; border: 1px solid #ccc; border-radius: 8px;
+    color: #666; font-size: 13px; padding: 5px 12px; cursor: pointer;
+    font-family: 'Inter', sans-serif; transition: all 0.2s;
+  }
+  .back-btn:hover { background: #f0f2f5; }
 
-  /* Tooltip */
   #tooltip {
-    position: fixed; z-index: 200; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px);
-    border: 1px solid #c0ccd8; border-radius: 8px; padding: 12px 16px;
-    pointer-events: none; max-width: 280px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    position: fixed; z-index: 200; background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
+    border: 1px solid #ddd; border-radius: 10px; padding: 14px 18px;
+    pointer-events: none; max-width: 300px; box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    display: none;
   }
-  .tt-name { color: #1a3050; font-size: 14px; font-weight: 700; }
-  .tt-path { color: #6080a0; font-size: 11px; margin-bottom: 8px; word-break: break-all; }
-  .tt-row { display: flex; justify-content: space-between; color: #506070; font-size: 12px; margin: 2px 0; }
-  .tt-row strong { color: #1a3050; }
-  .tt-test { color: #2a8a4a; font-size: 11px; margin-top: 6px; }
-  .tt-bug { color: #cc3030; font-size: 11px; margin-top: 2px; }
+  .tt-name { color: #1a1a2e; font-size: 15px; font-weight: 700; }
+  .tt-path { color: #888; font-size: 11px; margin-bottom: 8px; word-break: break-all; }
+  .tt-row { display: flex; justify-content: space-between; color: #666; font-size: 12px; margin: 3px 0; }
+  .tt-row strong { color: #222; }
+  .tt-test { color: #22883a; font-size: 11px; margin-top: 6px; }
+  .tt-bug { color: #d03030; font-size: 11px; }
 
-  /* Legend */
   #legend {
     position: fixed; bottom: 16px; left: 16px; z-index: 100;
-    background: rgba(255,255,255,0.85); backdrop-filter: blur(8px);
-    border: 1px solid #c0ccd8; border-radius: 8px; padding: 12px 16px;
+    background: rgba(255,255,255,0.88); backdrop-filter: blur(8px);
+    border: 1px solid #ddd; border-radius: 10px; padding: 14px 18px;
+    display: none;
   }
-  .legend-title { color: #708090; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-  .legend-item { color: #506070; font-size: 12px; display: flex; align-items: center; gap: 6px; margin: 3px 0; }
-  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  #legend.show { display: block; }
+  .legend-title { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 8px; }
+  .legend-item { color: #555; font-size: 12px; display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 
-  /* Activity feed */
   #activity-feed {
     position: fixed; bottom: 16px; right: 16px; z-index: 100;
-    background: rgba(255,255,255,0.85); backdrop-filter: blur(8px);
-    border: 1px solid #c0ccd8; border-radius: 8px; padding: 12px 16px;
-    max-width: 280px; max-height: 200px; overflow-y: auto;
+    background: rgba(255,255,255,0.88); backdrop-filter: blur(8px);
+    border: 1px solid #ddd; border-radius: 10px; padding: 14px 18px;
+    max-width: 300px; max-height: 220px; overflow-y: auto; display: none;
   }
-  .feed-title { color: #708090; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-  .feed-item { color: #506070; font-size: 11px; padding: 3px 0; border-bottom: 1px solid #e0e8f0; }
+  #activity-feed.show { display: block; }
+  .feed-title { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 8px; }
+  .feed-item { color: #555; font-size: 11px; padding: 4px 0; border-bottom: 1px solid #eee; line-height: 1.4; }
   .feed-item:last-child { border-bottom: none; }
+  .feed-author { font-weight: 600; color: #333; }
 
-  /* Help text */
   #help-text {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 100;
-    color: #8090a0; font-size: 11px; pointer-events: none;
+    color: rgba(0,0,0,0.3); font-size: 11px; pointer-events: none; display: none;
   }
+  #help-text.show { display: block; }
 </style>
 </head>
 <body>
 
+<!-- Landing Page -->
+<div id="landing">
+  <h1><span>Claude</span> City</h1>
+  <p class="subtitle">Turn any GitHub repo into a 3D city</p>
+  <div class="input-group">
+    <input id="repo-input" type="text" placeholder="owner/repo (e.g. facebook/react)" autofocus>
+    <button id="go-btn">Build City</button>
+  </div>
+  <p class="error" id="error-msg"></p>
+  <p class="examples">
+    Try:
+    <a data-repo="facebook/react">react</a> ·
+    <a data-repo="vercel/next.js">next.js</a> ·
+    <a data-repo="denoland/deno">deno</a> ·
+    <a data-repo="sveltejs/svelte">svelte</a> ·
+    <a data-repo="Manavarya09/cost-guardian">cost-guardian</a>
+  </p>
+  <p class="credit">Built by <a href="https://github.com/Manavarya09">Manavarya Singh</a></p>
+</div>
+
+<!-- Loading Screen -->
 <div id="loading">
-  <h1><span>$</span> Claude City</h1>
-  <p>Building your codebase...</p>
+  <h2>Building your city...</h2>
+  <p class="status" id="load-status">Connecting to GitHub...</p>
   <div class="loader"></div>
 </div>
 
-<div id="help-text">Click building for details · Scroll to zoom · Drag to rotate · R to reset camera</div>
+<!-- City UI (hidden until city loads) -->
+<div id="top-bar"><div class="top-left"></div><div class="top-right"></div></div>
+<div id="tooltip"></div>
+<div id="legend"></div>
+<div id="activity-feed"></div>
+<div id="help-text">Click building for details · Scroll to zoom · Drag to rotate · R to reset</div>
 
 <script type="importmap">
 {
@@ -107,109 +189,88 @@ import { City } from './city.js';
 import { AgentManager } from './agents.js';
 import { EffectsManager } from './effects.js';
 import { CityControls } from './controls.js';
+import { fetchRepoData } from './github-api.js';
 
-// --- Init ---
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+// --- Renderer ---
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.5;
+renderer.toneMappingExposure = 1.4;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87CEEB);
+// Sunset gradient background
+scene.background = new THREE.Color(0xf0a070);
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 500);
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 600);
 
-// --- Load Data ---
-async function loadData() {
+// --- Landing Page Logic ---
+const landing = document.getElementById('landing');
+const loading = document.getElementById('loading');
+const loadStatus = document.getElementById('load-status');
+const errorMsg = document.getElementById('error-msg');
+const repoInput = document.getElementById('repo-input');
+const goBtn = document.getElementById('go-btn');
+
+// Example repo links
+document.querySelectorAll('[data-repo]').forEach(el => {
+  el.addEventListener('click', () => {
+    repoInput.value = el.dataset.repo;
+    startBuild();
+  });
+});
+
+goBtn.addEventListener('click', startBuild);
+repoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') startBuild(); });
+
+async function startBuild() {
+  const input = repoInput.value.trim().replace('https://github.com/', '').replace(/\/$/, '');
+  if (!input || !input.includes('/')) {
+    errorMsg.textContent = 'Please enter a valid repo: owner/repo';
+    return;
+  }
+
+  const [owner, repo] = input.split('/');
+  errorMsg.textContent = '';
+  landing.classList.add('hide');
+  loading.classList.add('show');
+
   try {
-    const response = await fetch('./city-data.json');
-    if (!response.ok) throw new Error('No city-data.json found');
-    return await response.json();
+    const data = await fetchRepoData(owner, repo, (status) => {
+      loadStatus.textContent = status;
+    });
+    loading.classList.remove('show');
+    buildCity(data);
   } catch (e) {
-    console.warn('Using demo data:', e.message);
-    return generateDemoData();
+    loading.classList.remove('show');
+    landing.classList.remove('hide');
+    errorMsg.textContent = e.message;
   }
 }
 
-function generateDemoData() {
-  const languages = ['typescript', 'javascript', 'python', 'rust', 'go', 'java', 'ruby', 'css'];
-  const colors = { typescript: '#3178c6', javascript: '#f7df1e', python: '#3572A5', rust: '#dea584', go: '#00ADD8', java: '#b07219', ruby: '#701516', css: '#563d7c' };
-  const exts = { typescript: '.ts', javascript: '.js', python: '.py', rust: '.rs', go: '.go', java: '.java', ruby: '.rb', css: '.css' };
-  const topFolders = ['src', 'lib', 'api', 'components', 'services', 'models', 'utils', 'hooks', 'tests', 'config', 'middleware', 'controllers', 'views', 'routes', 'workers'];
-  const subFolders = ['auth', 'users', 'payments', 'core', 'common', 'types', 'helpers', 'db', 'cache', 'queue'];
-  const tree = [];
-
-  for (const folder of topFolders) {
-    const children = [];
-    // Some top folders get sub-folders
-    if (Math.random() > 0.4) {
-      const subs = subFolders.sort(() => Math.random() - 0.5).slice(0, 2 + Math.floor(Math.random() * 4));
-      for (const sub of subs) {
-        const subFiles = [];
-        const count = 3 + Math.floor(Math.random() * 12);
-        for (let i = 0; i < count; i++) {
-          const lang = languages[Math.floor(Math.random() * languages.length)];
-          subFiles.push({
-            name: `${sub}-${i}${exts[lang]}`, type: 'file', path: `${folder}/${sub}/${sub}-${i}${exts[lang]}`,
-            metrics: {
-              loc: 15 + Math.floor(Math.random() * 800), language: lang, color: colors[lang],
-              churn: Math.floor(Math.random() * 40), bug_count: Math.random() > 0.85 ? Math.floor(Math.random() * 5) : 0,
-              last_author: ['manavarya', 'alice', 'bob', 'charlie', 'dave', 'eve'][Math.floor(Math.random() * 6)],
-              is_test: folder === 'tests', age_days: Math.floor(Math.random() * 120)
-            }
-          });
-        }
-        children.push({ name: sub, type: 'directory', path: `${folder}/${sub}`, children: subFiles });
-      }
-    }
-    // Direct files in folder
-    const directCount = 5 + Math.floor(Math.random() * 15);
-    for (let i = 0; i < directCount; i++) {
-      const lang = languages[Math.floor(Math.random() * languages.length)];
-      children.push({
-        name: `${folder}-${i}${exts[lang]}`, type: 'file', path: `${folder}/${folder}-${i}${exts[lang]}`,
-        metrics: {
-          loc: 10 + Math.floor(Math.random() * 600), language: lang, color: colors[lang],
-          churn: Math.floor(Math.random() * 30), bug_count: Math.random() > 0.8 ? Math.floor(Math.random() * 4) : 0,
-          last_author: ['manavarya', 'alice', 'bob', 'charlie', 'dave', 'eve'][Math.floor(Math.random() * 6)],
-          is_test: folder === 'tests', age_days: Math.floor(Math.random() * 90)
-        }
-      });
-    }
-    tree.push({ name: folder, type: 'directory', path: folder, children });
-  }
-
-  return {
-    name: 'demo-project',
-    generated: new Date().toISOString(),
-    stats: { files: 350, directories: 50, loc: 85000, commits: 2400, contributors: 6, languages: { typescript: 90, javascript: 60, python: 45, rust: 30, go: 25, java: 40, ruby: 20, css: 40 }, dependency_edges: 120 },
-    contributors: [{ name: 'manavarya', commits: 800 }, { name: 'alice', commits: 500 }, { name: 'bob', commits: 400 }, { name: 'charlie', commits: 300 }, { name: 'dave', commits: 250 }, { name: 'eve', commits: 150 }],
-    tree,
-    dependencies: [],
-    recent_activity: [
-      { file: 'src/auth/login.ts', author: 'manavarya', type: 'edit', time: new Date().toISOString() },
-      { file: 'api/routes/users.ts', author: 'alice', type: 'edit', time: new Date().toISOString() },
-      { file: 'services/payments/stripe.py', author: 'bob', type: 'edit', time: new Date().toISOString() },
-      { file: 'components/dashboard.tsx', author: 'charlie', type: 'edit', time: new Date().toISOString() },
-      { file: 'workers/queue/processor.go', author: 'dave', type: 'edit', time: new Date().toISOString() },
-    ],
-    agents: []
-  };
+// Check URL params
+const params = new URLSearchParams(window.location.search);
+if (params.get('repo')) {
+  repoInput.value = params.get('repo');
+  startBuild();
 }
 
-// --- Main ---
-async function main() {
-  const data = await loadData();
+// --- Build City ---
+function buildCity(data) {
+  // Show UI
+  document.getElementById('top-bar').classList.add('show');
+  document.getElementById('legend').classList.add('show');
+  document.getElementById('activity-feed').classList.add('show');
+  document.getElementById('help-text').classList.add('show');
 
-  // Build city
+  // City
   const city = new City(scene, data);
   city.build();
 
-  // Effects
+  // Effects — sunset atmosphere
   const effects = new EffectsManager(scene);
   effects.createAtmosphere();
   effects.addBugFires(city.buildings);
@@ -217,14 +278,12 @@ async function main() {
 
   // Agents
   const agents = new AgentManager(scene, city);
-  // Spawn demo agents based on contributors
-  const contributors = data.contributors || [];
-  for (let i = 0; i < Math.min(contributors.length, 4); i++) {
-    const agent = agents.createAgent(i, contributors[i].name);
-    // Send to random building
+  const contribs = data.contributors || [];
+  for (let i = 0; i < Math.min(contribs.length, 6); i++) {
+    const agent = agents.createAgent(i, contribs[i].name);
     if (city.buildings.length > 0) {
-      const randomBuilding = city.buildings[Math.floor(Math.random() * city.buildings.length)];
-      agents.setTarget(agent, randomBuilding.data.path);
+      const rb = city.buildings[Math.floor(Math.random() * city.buildings.length)];
+      agents.setTarget(agent, rb.data.path);
     }
   }
 
@@ -232,30 +291,20 @@ async function main() {
   const controls = new CityControls(camera, renderer, city, data);
   controls.bindButtons(effects);
 
-  // Hide loading screen
-  document.getElementById('loading').classList.add('hide');
-  setTimeout(() => document.getElementById('loading').remove(), 500);
-
-  // --- Animation Loop ---
+  // Animation loop
   const clock = new THREE.Clock();
-
   function animate() {
     requestAnimationFrame(animate);
     const delta = Math.min(clock.getDelta(), 0.05);
     const time = clock.getElapsedTime();
-
     city.update(time);
     effects.update(time, delta);
     agents.update(time, delta);
     controls.update();
-
     renderer.render(scene, camera);
   }
-
   animate();
 }
-
-main();
 </script>
 </body>
 </html>

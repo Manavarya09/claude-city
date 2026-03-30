@@ -12,39 +12,39 @@ export class EffectsManager {
   }
 
   createAtmosphere() {
-    // Bright sky background
-    this.scene.background = new THREE.Color(0x87CEEB);
+    // Sunset sky
+    this.scene.background = new THREE.Color(0xf0a070);
 
-    // Bright ambient light
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    // Warm ambient
+    const ambient = new THREE.AmbientLight(0xffeedd, 0.5);
     this.scene.add(ambient);
 
-    // Sun — warm directional light with shadows
-    const sun = new THREE.DirectionalLight(0xfff5e0, 1.2);
-    sun.position.set(100, 150, 80);
+    // Golden hour sun — low angle, warm orange
+    const sun = new THREE.DirectionalLight(0xffaa66, 1.4);
+    sun.position.set(200, 50, 100); // Low angle for long shadows
     sun.castShadow = true;
     sun.shadow.mapSize.width = 2048;
     sun.shadow.mapSize.height = 2048;
     sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 400;
-    sun.shadow.camera.left = -150;
-    sun.shadow.camera.right = 150;
-    sun.shadow.camera.top = 150;
-    sun.shadow.camera.bottom = -150;
+    sun.shadow.camera.far = 500;
+    sun.shadow.camera.left = -200;
+    sun.shadow.camera.right = 200;
+    sun.shadow.camera.top = 200;
+    sun.shadow.camera.bottom = -200;
     sun.shadow.bias = -0.001;
     this.scene.add(sun);
 
-    // Fill light from opposite side (softer, blue-ish)
-    const fill = new THREE.DirectionalLight(0xaaccff, 0.3);
-    fill.position.set(-60, 80, -40);
+    // Cool fill from shadow side (blue-purple)
+    const fill = new THREE.DirectionalLight(0x6688cc, 0.25);
+    fill.position.set(-80, 60, -50);
     this.scene.add(fill);
 
-    // Hemisphere: sky blue above, ground grey below
-    const hemi = new THREE.HemisphereLight(0x87CEEB, 0x606060, 0.4);
+    // Hemisphere: warm sky + cool ground bounce
+    const hemi = new THREE.HemisphereLight(0xffccaa, 0x445566, 0.35);
     this.scene.add(hemi);
 
-    // Soft distance fog (atmospheric haze)
-    this.scene.fog = new THREE.Fog(0xb8d4e8, 100, 350);
+    // Warm sunset fog
+    this.scene.fog = new THREE.Fog(0xe8a878, 120, 400);
   }
 
   // --- Fire (bugs) ---
