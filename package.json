@@ -4,7 +4,8 @@
   "description": "Turn any GitHub repo into a stunning 3D city — files become buildings, folders become districts, bugs become fires",
   "scripts": {
     "dev": "npx serve app -l 3333",
-    "start": "npx serve app -l 3333"
+    "start": "npx serve app -l 3333",
+    "test": "echo \"No tests configured yet\" && exit 0"
   },
   "keywords": ["3d", "visualization", "threejs", "github", "codebase", "city", "webgl"],
   "author": "Manavarya Singh",
