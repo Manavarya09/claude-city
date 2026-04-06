@@ -102,8 +102,11 @@ export class AgentManager {
   setStatus(agentId, text) {
     const agent = this.agents.find(a => a.id === agentId);
     if (!agent) return;
-    // Update status label
-    this.group.remove(agent.statusSprite);
+    // Remove old status sprite from the agent's own group (not this.group)
+    if (agent.statusSprite) {
+      agent.mesh.remove(agent.statusSprite);
+      this.disposeObject(agent.statusSprite);
+    }
     const newStatus = this.createLabel(text, new THREE.Color(0xaaaaaa));
     newStatus.position.y = 1.4;
     newStatus.scale.set(4, 0.8, 1);
@@ -171,8 +174,21 @@ export class AgentManager {
   removeAgent(id) {
     const index = this.agents.findIndex(a => a.id === id);
     if (index !== -1) {
-      this.group.remove(this.agents[index].mesh);
+      const agent = this.agents[index];
+      // Dispose all Three.js resources to prevent memory leaks
+      agent.mesh.traverse((child) => {
+        this.disposeObject(child);
+      });
+      this.group.remove(agent.mesh);
       this.agents.splice(index, 1);
+    }
+  }
+
+  disposeObject(obj) {
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) {
+      if (obj.material.map) obj.material.map.dispose();
+      obj.material.dispose();
     }
   }
 }
