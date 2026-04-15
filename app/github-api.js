@@ -86,6 +86,7 @@ export async function fetchRepoData(owner, repo, statusCallback) {
     name: repo,
     owner,
     fullName: `${owner}/${repo}`,
+    defaultBranch: repoData.default_branch || 'main',
     description: repoData.description || '',
     stars: repoData.stargazers_count,
     forks: repoData.forks_count,

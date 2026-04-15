@@ -30,6 +30,7 @@ export class CityControls {
     // Event listeners
     renderer.domElement.addEventListener('mousemove', (e) => this.onMouseMove(e));
     renderer.domElement.addEventListener('click', (e) => this.onClick(e));
+    renderer.domElement.addEventListener('dblclick', (e) => this.onDblClick(e));
     window.addEventListener('resize', () => this.onResize());
     window.addEventListener('keydown', (e) => this.onKeyDown(e));
   }
@@ -110,6 +111,7 @@ export class CityControls {
         <div class="tt-row"><span>Author:</span> <strong>${d.last_author}</strong></div>
         ${d.is_test ? '<div class="tt-test">✅ Test file</div>' : ''}
         ${d.bug_count > 0 ? '<div class="tt-bug">🔥 Has bugs</div>' : ''}
+        <div class="tt-hint">Double-click to open on GitHub</div>
       `;
       this.renderer.domElement.style.cursor = 'pointer';
     } else {
@@ -125,6 +127,15 @@ export class CityControls {
       const h = this.hoveredBuilding.userData.height || 5;
       // Smooth zoom to building
       this.animateCamera(pos.x + 5, h + 8, pos.z + 5, pos.x, h / 2, pos.z);
+    }
+  }
+
+  onDblClick(event) {
+    if (this.hoveredBuilding) {
+      const d = this.hoveredBuilding.userData;
+      const branch = this.data.defaultBranch || 'main';
+      const url = `https://github.com/${this.data.fullName}/blob/${branch}/${d.path}`;
+      window.open(url, '_blank');
     }
   }
 
