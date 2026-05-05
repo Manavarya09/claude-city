@@ -1,5 +1,11 @@
 # Code City
 
+[![License: MIT](https://img.shields.io/github/license/Manavarya09/code-city?color=0a0a0a)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/Manavarya09/code-city?style=flat&color=0a0a0a)](https://github.com/Manavarya09/code-city/stargazers)
+[![Issues](https://img.shields.io/github/issues/Manavarya09/code-city?color=0a0a0a)](https://github.com/Manavarya09/code-city/issues)
+[![Last commit](https://img.shields.io/github/last-commit/Manavarya09/code-city?color=0a0a0a)](https://github.com/Manavarya09/code-city/commits/main)
+
+
 **Turn any GitHub repo into a 3D city.**
 
 Paste a repo URL → watch it transform into a navigable 3D cityscape with buildings, districts, fires, and walking characters. 100% client-side, no backend, no signups.
